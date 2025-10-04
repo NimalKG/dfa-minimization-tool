@@ -56,7 +56,7 @@ if st.button("Visualize & Minimize DFA"):
     states = [s for s in states if s in reachable_states]
 
     # --- Function to draw DFA with arrows, self-loops, and start arrow ---
-    def draw_dfa_graph(dfa_dict, title):
+    def draw_dfa_graph(dfa_dict, title, start_state=None, part_map=None):
         G = nx.DiGraph()
         edges = {}
         for u in dfa_dict:
@@ -106,13 +106,18 @@ if st.button("Visualize & Minimize DFA"):
         nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=10)
 
         # Draw start arrow
-        if start_state in pos:
-            x, y = pos[start_state]
-            ax.annotate("",
-                        xy=(x, y),
-                        xytext=(x-0.6, y+0.6),
-                        arrowprops=dict(arrowstyle='-|>', color='green', lw=2))
-            ax.text(x-0.65, y+0.65, "Start", color='green', fontsize=10, fontweight='bold')
+        if start_state:
+            if part_map:  # minimized DFA: get corresponding partition node
+                start_node = part_map[start_state]
+            else:
+                start_node = start_state
+            if start_node in pos:
+                x, y = pos[start_node]
+                ax.annotate("",
+                            xy=(x, y),
+                            xytext=(x-0.6, y+0.6),
+                            arrowprops=dict(arrowstyle='-|>', color='green', lw=2))
+                ax.text(x-0.65, y+0.65, "Start", color='green', fontsize=10, fontweight='bold')
 
         ax.set_title(title, fontsize=14)
         ax.set_axis_off()
@@ -121,7 +126,7 @@ if st.button("Visualize & Minimize DFA"):
     # Draw Original DFA
     st.subheader("Original DFA")
     col1, col2 = st.columns([1, 1])
-    fig_orig = draw_dfa_graph(dfa, "Original DFA")
+    fig_orig = draw_dfa_graph(dfa, "Original DFA", start_state=start_state)
     col1.pyplot(fig_orig)
     plt.close(fig_orig)
 
@@ -169,9 +174,9 @@ if st.button("Visualize & Minimize DFA"):
             tgt = dfa.get(rep, {}).get(a)
             minimized[name][a] = part_map[tgt] if tgt else None
 
-    # Draw Minimized DFA
+    # Draw Minimized DFA with start arrow
     st.subheader("Minimized DFA")
-    fig_min = draw_dfa_graph(minimized, "Minimized DFA")
+    fig_min = draw_dfa_graph(minimized, "Minimized DFA", start_state=start_state, part_map=part_map)
     col2.pyplot(fig_min)
     plt.close(fig_min)
 
