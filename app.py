@@ -59,17 +59,21 @@ if st.button("Visualize & Minimize DFA"):
     dfa = {s: dfa[s] for s in dfa if s in reachable_states}
     states = [s for s in states if s in reachable_states]
 
-    # --- Function to draw DFA graph with clear self-loops ---
+    # --- Function to draw DFA graph with self-loops and correct alphabet order ---
     def draw_dfa_graph(dfa_dict, title):
         G = nx.DiGraph()
         edges = {}
         for u in dfa_dict:
             for a, v in dfa_dict[u].items():
                 if v is None: continue
-                edges.setdefault((u, v), []).append(a)
+                edges.setdefault((u, v), [])
+                if a in alphabet:
+                    edges[(u, v)].append(a)
 
         for (u, v), syms in edges.items():
-            G.add_edge(u, v, label=",".join(syms))
+            # Sort symbols according to original alphabet
+            sorted_syms = [sym for sym in alphabet if sym in syms]
+            G.add_edge(u, v, label=",".join(sorted_syms))
 
         pos = nx.circular_layout(G)
 
