@@ -55,8 +55,8 @@ if st.button("Visualize & Minimize DFA"):
     dfa = {s: dfa[s] for s in dfa if s in reachable_states}
     states = [s for s in states if s in reachable_states]
 
-    # --- Function to draw DFA with arrows, self-loops, and start arrow ---
-    def draw_dfa_graph(dfa_dict, title, start_state=None, part_map=None):
+    # --- Function to draw DFA with colored nodes ---
+    def draw_dfa_graph(dfa_dict, title, start_state=None, finals=None, part_map=None):
         G = nx.DiGraph()
         edges = {}
         for u in dfa_dict:
@@ -73,13 +73,23 @@ if st.button("Visualize & Minimize DFA"):
         pos = nx.circular_layout(G)
 
         fig, ax = plt.subplots(figsize=(8,6))
-        nx.draw_networkx_nodes(G, pos, node_size=2000, node_color="lightblue")
+
+        # Determine node colors
+        node_colors = []
+        for node in G.nodes():
+            if part_map and start_state and part_map.get(start_state) == node:
+                node_colors.append("lightgreen")  # start state
+            elif finals and node in finals:
+                node_colors.append("yellow")       # final states
+            else:
+                node_colors.append("lightblue")    # normal states
+
+        nx.draw_networkx_nodes(G, pos, node_size=2000, node_color=node_colors)
         nx.draw_networkx_labels(G, pos, font_size=12, font_weight="bold")
 
         # Draw edges
         for (u, v, d) in G.edges(data=True):
             if u == v:
-                # Self-loop
                 x, y = pos[u]
                 loop = mpatches.FancyArrowPatch(
                     (x, y+0.1), (x, y+0.1),
@@ -107,7 +117,7 @@ if st.button("Visualize & Minimize DFA"):
 
         # Draw start arrow
         if start_state:
-            if part_map:  # minimized DFA: get corresponding partition node
+            if part_map:
                 start_node = part_map[start_state]
             else:
                 start_node = start_state
@@ -126,7 +136,7 @@ if st.button("Visualize & Minimize DFA"):
     # Draw Original DFA
     st.subheader("Original DFA")
     col1, col2 = st.columns([1, 1])
-    fig_orig = draw_dfa_graph(dfa, "Original DFA", start_state=start_state)
+    fig_orig = draw_dfa_graph(dfa, "Original DFA", start_state=start_state, finals=finals)
     col1.pyplot(fig_orig)
     plt.close(fig_orig)
 
@@ -174,9 +184,10 @@ if st.button("Visualize & Minimize DFA"):
             tgt = dfa.get(rep, {}).get(a)
             minimized[name][a] = part_map[tgt] if tgt else None
 
-    # Draw Minimized DFA with start arrow
+    # Draw Minimized DFA with colored nodes
     st.subheader("Minimized DFA")
-    fig_min = draw_dfa_graph(minimized, "Minimized DFA", start_state=start_state, part_map=part_map)
+    fig_min = draw_dfa_graph(minimized, "Minimized DFA", start_state=start_state,
+                             finals={part_map[s] for s in finals}, part_map=part_map)
     col2.pyplot(fig_min)
     plt.close(fig_min)
 
