@@ -58,29 +58,42 @@ if st.button("Visualize & Minimize DFA"):
     dfa = {s: dfa[s] for s in dfa if s in reachable_states}
     states = [s for s in states if s in reachable_states]
 
-    # --- Function to draw DFA graph ---
-    def draw_graph(graph_dict, title):
+    # --- Function to draw DFA graph with circular layout and curved self-loops ---
+    def draw_dfa_graph(dfa_dict, title):
+        G = nx.DiGraph()
         edges = {}
-        for u in graph_dict:
-            for a, v in graph_dict[u].items():
+        for u in dfa_dict:
+            for a, v in dfa_dict[u].items():
                 if v is None: continue
                 edges.setdefault((u, v), []).append(a)
-        G = nx.DiGraph()
+
         for (u, v), syms in edges.items():
             G.add_edge(u, v, label=",".join(syms))
-        pos = nx.spring_layout(G, seed=42)
-        fig, ax = plt.subplots(figsize=(6, 4))
-        nx.draw(G, pos, ax=ax, with_labels=True, node_color="lightblue", node_size=1600)
+
+        pos = nx.circular_layout(G)  # circular layout
+
+        fig, ax = plt.subplots(figsize=(8,6))
+        nx.draw_networkx_nodes(G, pos, node_size=2000, node_color="lightblue")
+        nx.draw_networkx_labels(G, pos, font_size=12, font_weight="bold")
+
+        # Draw edges with self-loop curvature
+        for (u, v, d) in G.edges(data=True):
+            rad = 0.3 if u == v else 0.0  # curve self-loops
+            nx.draw_networkx_edges(
+                G, pos, edgelist=[(u,v)], connectionstyle=f"arc3,rad={rad}", arrowsize=20
+            )
+
         edge_labels = nx.get_edge_attributes(G, "label")
-        nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, ax=ax, font_size=9)
-        ax.set_title(title)
+        nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=10)
+
+        ax.set_title(title, fontsize=14)
         ax.set_axis_off()
         return fig
 
     # --- Draw Original DFA ---
     st.subheader("Original DFA")
     col1, col2 = st.columns([1, 1])
-    fig_orig = draw_graph(dfa, "Original DFA")
+    fig_orig = draw_dfa_graph(dfa, "Original DFA")
     col1.pyplot(fig_orig)
     plt.close(fig_orig)
 
@@ -134,7 +147,7 @@ if st.button("Visualize & Minimize DFA"):
 
     # --- Draw Minimized DFA ---
     st.subheader("Minimized DFA")
-    fig_min = draw_graph(minimized, "Minimized DFA")
+    fig_min = draw_dfa_graph(minimized, "Minimized DFA")
     col2.pyplot(fig_min)
     plt.close(fig_min)
 
@@ -150,3 +163,4 @@ if st.button("Visualize & Minimize DFA"):
     final_parts = sorted({part_map[s] for s in finals if s in part_map})
     st.write(f"Final partitions: **{final_parts}**")
 # Added main Streamlit app file
+
