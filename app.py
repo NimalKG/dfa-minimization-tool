@@ -1,6 +1,7 @@
 import streamlit as st
 import networkx as nx
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 
 st.set_page_config(page_title="DFA Minimization Tool", layout="wide")
 st.title("🤖 DFA Minimization & Visualization Tool")
@@ -58,7 +59,7 @@ if st.button("Visualize & Minimize DFA"):
     dfa = {s: dfa[s] for s in dfa if s in reachable_states}
     states = [s for s in states if s in reachable_states]
 
-    # --- Function to draw DFA graph with circular layout and curved self-loops ---
+    # --- Function to draw DFA graph with clear self-loops ---
     def draw_dfa_graph(dfa_dict, title):
         G = nx.DiGraph()
         edges = {}
@@ -70,20 +71,37 @@ if st.button("Visualize & Minimize DFA"):
         for (u, v), syms in edges.items():
             G.add_edge(u, v, label=",".join(syms))
 
-        pos = nx.circular_layout(G)  # circular layout
+        pos = nx.circular_layout(G)
 
         fig, ax = plt.subplots(figsize=(8,6))
         nx.draw_networkx_nodes(G, pos, node_size=2000, node_color="lightblue")
         nx.draw_networkx_labels(G, pos, font_size=12, font_weight="bold")
 
-        # Draw edges with self-loop curvature
+        # Draw edges with self-loops handled separately
         for (u, v, d) in G.edges(data=True):
-            rad = 0.3 if u == v else 0.0  # curve self-loops
-            nx.draw_networkx_edges(
-                G, pos, edgelist=[(u,v)], connectionstyle=f"arc3,rad={rad}", arrowsize=20
-            )
+            if u == v:
+                # Self-loop: draw as curved arrow above the node
+                x, y = pos[u]
+                loop = mpatches.FancyArrowPatch(
+                    (x, y+0.1), (x, y+0.1),
+                    connectionstyle="arc3,rad=0.5",
+                    arrowstyle='-|>',
+                    mutation_scale=20,
+                    color='black'
+                )
+                ax.add_patch(loop)
+                ax.text(x, y+0.18, d['label'], fontsize=10, ha='center')
+            else:
+                # Normal edge with slight curve
+                rad = 0.1
+                nx.draw_networkx_edges(
+                    G, pos, edgelist=[(u,v)],
+                    connectionstyle=f"arc3,rad={rad}",
+                    arrowsize=20
+                )
 
-        edge_labels = nx.get_edge_attributes(G, "label")
+        # Edge labels for non self-loops
+        edge_labels = {(u,v): d['label'] for u,v,d in G.edges(data=True) if u != v}
         nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=10)
 
         ax.set_title(title, fontsize=14)
@@ -162,5 +180,3 @@ if st.button("Visualize & Minimize DFA"):
     st.write(f"Start partition: **{start_p}**")
     final_parts = sorted({part_map[s] for s in finals if s in part_map})
     st.write(f"Final partitions: **{final_parts}**")
-# Added main Streamlit app file
-
