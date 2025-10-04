@@ -10,11 +10,10 @@ st.write("Enter a DFA, visualize original and minimized versions.")
 # ---- Step 1: Input Section ----
 st.header("Enter DFA Details")
 
-# Instruction for user
 st.write("**Input format for transitions:** `State,Symbol=NextState`")
 st.write("Example (for understanding only): `A,0=B  A,1=C  B,0=A  B,1=D`")
 
-# Input boxes (empty)
+# Input boxes
 states_txt = st.text_input("States (comma-separated):")
 alphabet_txt = st.text_input("Alphabet (comma-separated):")
 start_state = st.text_input("Start state:")
@@ -23,7 +22,6 @@ transition_input = st.text_area("Enter transitions (one per line):")
 
 # ---- Step 2: Button to run visualization ----
 if st.button("Visualize & Minimize DFA"):
-    # --- Parse Inputs ---
     states = [s.strip() for s in states_txt.split(",") if s.strip()]
     alphabet = [a.strip() for a in alphabet_txt.split(",") if a.strip()]
     finals = {f.strip() for f in finals_txt.split(",") if f.strip()}
@@ -32,16 +30,14 @@ if st.button("Visualize & Minimize DFA"):
     dfa = {s: {} for s in states}
     for line in transition_input.splitlines():
         line = line.strip()
-        if not line: 
-            continue
-        if "=" not in line or "," not in line:
+        if not line or "=" not in line or "," not in line:
             st.error(f"Ignoring invalid line: {line}")
             continue
         left, right = line.split("=")
         state, symbol = [x.strip() for x in left.split(",")]
         dfa.setdefault(state, {})[symbol] = right.strip()
 
-    # --- Remove unreachable states ---
+    # Remove unreachable states
     def reachable(start, dfa):
         seen = set()
         stack = [start]
@@ -59,7 +55,7 @@ if st.button("Visualize & Minimize DFA"):
     dfa = {s: dfa[s] for s in dfa if s in reachable_states}
     states = [s for s in states if s in reachable_states]
 
-    # --- Function to draw DFA graph with self-loops and correct alphabet order ---
+    # --- Function to draw DFA with arrows, self-loops, and start arrow ---
     def draw_dfa_graph(dfa_dict, title):
         G = nx.DiGraph()
         edges = {}
@@ -71,7 +67,6 @@ if st.button("Visualize & Minimize DFA"):
                     edges[(u, v)].append(a)
 
         for (u, v), syms in edges.items():
-            # Sort symbols according to original alphabet
             sorted_syms = [sym for sym in alphabet if sym in syms]
             G.add_edge(u, v, label=",".join(sorted_syms))
 
@@ -81,10 +76,10 @@ if st.button("Visualize & Minimize DFA"):
         nx.draw_networkx_nodes(G, pos, node_size=2000, node_color="lightblue")
         nx.draw_networkx_labels(G, pos, font_size=12, font_weight="bold")
 
-        # Draw edges with self-loops handled separately
+        # Draw edges
         for (u, v, d) in G.edges(data=True):
             if u == v:
-                # Self-loop: draw as curved arrow above the node
+                # Self-loop
                 x, y = pos[u]
                 loop = mpatches.FancyArrowPatch(
                     (x, y+0.1), (x, y+0.1),
@@ -96,30 +91,41 @@ if st.button("Visualize & Minimize DFA"):
                 ax.add_patch(loop)
                 ax.text(x, y+0.18, d['label'], fontsize=10, ha='center')
             else:
-                # Normal edge with slight curve
                 rad = 0.1
                 nx.draw_networkx_edges(
                     G, pos, edgelist=[(u,v)],
                     connectionstyle=f"arc3,rad={rad}",
-                    arrowsize=20
+                    arrows=True,
+                    arrowstyle='-|>',
+                    arrowsize=25,
+                    edge_color='black'
                 )
 
-        # Edge labels for non self-loops
+        # Edge labels for non self-loop edges
         edge_labels = {(u,v): d['label'] for u,v,d in G.edges(data=True) if u != v}
         nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=10)
+
+        # Draw start arrow
+        if start_state in pos:
+            x, y = pos[start_state]
+            ax.annotate("",
+                        xy=(x, y),
+                        xytext=(x-0.6, y+0.6),
+                        arrowprops=dict(arrowstyle='-|>', color='green', lw=2))
+            ax.text(x-0.65, y+0.65, "Start", color='green', fontsize=10, fontweight='bold')
 
         ax.set_title(title, fontsize=14)
         ax.set_axis_off()
         return fig
 
-    # --- Draw Original DFA ---
+    # Draw Original DFA
     st.subheader("Original DFA")
     col1, col2 = st.columns([1, 1])
     fig_orig = draw_dfa_graph(dfa, "Original DFA")
     col1.pyplot(fig_orig)
     plt.close(fig_orig)
 
-    # --- Step 3: Minimization (partition refinement) ---
+    # --- DFA Minimization ---
     non_final = [s for s in states if s not in finals]
     partitions = []
     if finals:
@@ -150,7 +156,6 @@ if st.button("Visualize & Minimize DFA"):
             new_parts.extend(groups.values())
         partitions = new_parts
 
-    # Build minimized DFA
     part_map = {}
     for i, p in enumerate(partitions):
         for s in p:
@@ -162,18 +167,15 @@ if st.button("Visualize & Minimize DFA"):
         minimized[name] = {}
         for a in alphabet:
             tgt = dfa.get(rep, {}).get(a)
-            if tgt is None:
-                minimized[name][a] = None
-            else:
-                minimized[name][a] = part_map[tgt]
+            minimized[name][a] = part_map[tgt] if tgt else None
 
-    # --- Draw Minimized DFA ---
+    # Draw Minimized DFA
     st.subheader("Minimized DFA")
     fig_min = draw_dfa_graph(minimized, "Minimized DFA")
     col2.pyplot(fig_min)
     plt.close(fig_min)
 
-    # --- Step 4: Summary ---
+    # Summary
     st.markdown("### Summary")
     st.write(f"Original states (reachable): **{len(states)}**")
     st.write(f"Minimized states: **{len(minimized)}**")
