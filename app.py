@@ -154,6 +154,6 @@ if st.sidebar.button("Visualize & Minimize"):
     st.write(f"Start partition: **{start_p}** {labels_for_nodes.get(start_p,'')}")
     final_parts = sorted({part_map[s] for s in finals if s in part_map})
     st.write(f"Final partitions: **{final_parts}**")
-  Added main Streamlit app file
+  # Added main Streamlit app file
 
   
